@@ -1,0 +1,84 @@
+---
+version: '3'
+services:
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.10
+    depends_on:
+      - redis-master
+      - redis-sentinel1
+      - redis-sentinel2
+      - redis-sentinel3
+  redis-master:
+    container_name: redis-master
+    image: redis:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.11
+    command: redis-server
+  redis-sentinel1:
+    container_name: redis-sentinel1
+    build:
+      context: .
+      dockerfile: sentinel.dockerfile
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.14
+    depends_on:
+      - redis-master
+  redis-slave1:
+    container_name: redis-slave1
+    image: redis:latest
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.12
+    command: redis-server --slaveof redis-master 6379
+    depends_on:
+      - redis-master
+  redis-sentinel2:
+    container_name: redis-sentinel2
+    build:
+      context: .
+      dockerfile: sentinel.dockerfile
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.15
+    depends_on:
+      - redis-master
+  redis-slave2:
+    container_name: redis-slave2
+    image: redis:latest
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.13
+    command: redis-server --slaveof redis-master 6379
+    depends_on:
+      - redis-master
+  redis-sentinel3:
+    container_name: redis-sentinel3
+    build:
+      context: .
+      dockerfile: sentinel.dockerfile
+    networks:
+      redis-network:
+        ipv4_address: 172.31.0.16
+    depends_on:
+      - redis-master
+
+networks:
+  redis-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.31.0.0/20"
